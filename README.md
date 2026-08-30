@@ -1,146 +1,135 @@
-![Logo](./.github/assets/logo_open_source.png)
+# 改 Mod 工程 — BedWars1058 可视化商店编辑器
 
+基于开源小游戏插件 [BedWars1058](https://github.com/andrei1058/BedWars1058) 的二次开发工程。
+在保留原插件全部功能的基础上，**新增了一个游戏内可视化商店编辑器**，让服主无需手动改
+`shop.yml`，直接通过 GUI 增删改商店分类、商品和 tier，并支持把背包里带完整 NBT 的
+（模组）物品拖进商店。
 
-As from November 1st 2021 BedWars1058 by Andrei Dascălu becomes open source under GNU GPL 3.0 license. If you are a developer I would really appreciate if you'd come with pull requests instead of making hundreds of forks. Let's make updates available for everyone!
+> 适用服务器：Arclight 1.20.1（Forge 47.4.18）。模组物品的 NBT 会以 base64 序列化写入
+> `shop.yml`，实现与纯 Bukkit/Spigot 物品一致的商品化。
 
-[![Discord](https://discordapp.com/api/guilds/201345265821679617/widget.png?style=shield)](https://discord.gg/XdJfN2X)
+---
 
-[![Crowdin](https://support.crowdin.com/assets/badges/localization-at-white-rounded-bordered@1x.svg)](https://crowdin.com/project/bedwars1058)
+## 环境要求
 
-# Description
-BedWars is a mini-game where you have to defend your bed and destroy the others.  
-Once your bed is destroyed, you cannot respawn.
+| 项目 | 要求 |
+| --- | --- |
+| 服务器核心 | Arclight 1.20.1（Forge 47.4.18） |
+| Java | 11 或更高 |
+| 构建工具 | Maven |
 
-# System requirements
-This software runs on [Spigot](https://www.spigotmc.org/) and NMS.
-Spigot forks without compiled NMS code are not supported.
-Officially supported servers are [spigot](https://www.spigotmc.org/) and [paper](https://papermc.io/).
-It is required to use **Java 11** or newer.
+> 源码 `pom.xml` 版本基线为 `25.2`；当前服务器实际部署的插件版本为 `25.5-SNAPSHOT`。
+> 补丁是在 `25.5-SNAPSHOT` 的 jar 基础上直接替换 class 得到的（见「补丁与部署」）。
 
-The internal world restore system is based on zipping and unzipping maps which can become
-heavy if you are still making use of HDDs and you do not have a decent CPU, for a better
-and faster restore system we recommend using one of the following solutions:
-- [SlimeWorldManager](https://www.spigotmc.org/resources/slimeworldmanager.69974/) plug-in (v2.2.1 **only**)
-- [AdvancedWorldManager](https://www.spigotmc.org/resources/advanced-slimeworldmanager.87209/) plug-in (v2.8.0 **only**)
-- [AdvancedSlimePaper](https://github.com/InfernalSuite/AdvancedSlimePaper) server jar (**1.20 or newer**)
+---
 
-BedWars1058 will hook into it and do everything for you, no additional configuration is needed.
+## 主要改动（魔改内容）
 
-# Pre-made setups and community add-ons
+### 1. 可视化商店编辑器（新增）
 
-You can find a list of pre-made server setups and a lot of community add-ons [on BedWars1058 Wiki](https://wiki.andrei1058.dev/docs/BedWars1058/addons).
+- 命令 `/bw shopeditor` 打开编辑器主菜单，权限节点 `bw.shopeditor`。
+- 支持**分类**、**商品（content）**、**tier** 三层结构的增删改。
+- 支持从玩家背包**拖拽物品**进编辑器，物品的完整 NBT（含模组物品）会被序列化保存。
+- 支持设置价格、货币、永久物品（permanent）、不可破坏（unbreakable）等属性。
+- 编辑器内的改动可即时保存（`shop.yml`）。
 
-# Main features
+### 2. 稳定性修复
 
-###### Flexible | Ways you can run the plugin:
-- **SHARED**: can run among other mini-games on the same spigot instance. Games will only be accessible via commands.
-- **MULTIARENA**: will require an entire server instance for hosting the mini-game. It will protect the lobby world and games can be joined via commands, NPCs, signs and GUIs.
-- **BUNGEE-LEGACY**: the old classic bungee mode where a game means an entire server instance. You'll be added to the game when joining the server. Arena status will be displayed as MOTD.
-- **BUNGEE**: a brand new scalable bungee mode. It can host multiple arenas on the same server instance, clone and start new arenas when needed so other players can join. The server can be automatically restarted after a certain amount of games played. This will require installing [BedWarsProxy](https://www.spigotmc.org/resources/bedwarsproxy.66642/) on your lobby servers so players can join. And of course, you can run as many servers as you want in bungee mode.
+- 修复「新建分类缺少 `category-content` 节点」导致插件启动时
+  `ShopCategory` 构造 NPE、进而拖垮整个 `onEnable` 的问题。
+- 分类名 `sanitize` 逻辑拦截纯符号 / 中文名，避免生成非法节点名。
+- `ShopCategory` 构造器增加空值防护：缺少 `category-content` 时告警并跳过，
+  不再让单个异常数据把整个服务器带崩。
 
-###### Language | Per player language system:
-- each player can receive messages, holograms, GUIs etc. in their desired language. /bw lang.
-- you can either remove or add new languages.
-- team names, group names, shop contents and a lot more can be translated in your languages.
-- custom titles and subtitles for [starting countdown](https://gitlab.com/andrei1058/BedWars1058/-/wikis/language-configuration#custom-title-sub-title-for-arena-countdown).
+---
 
-###### Lobby removal | Optional:
-The waiting-lobby inside the map can be removed once the game starts.
+## 改动涉及的主要文件
 
-###### Arena Groups | Customization:
-- you can group arenas by type (4v4, 50v50). You can name them however you want.
-- groups can have custom scoreboard layouts, team upgrades, start items and custom generator settings.
-- you can join maps by group: /bw join Solo, /bw gui Solo.
+新增：
 
-###### Shop | Customization:
-- you may configure quick-buy default items.
-- you may add or remove categories.
-- you may add new shop items or execute commands when bought.
-- permanent items are given after you re-spawn.
-- permanent items can be downgradable which will make you lose one tier per death.
-- items can have weight so you can't buy a weaker item than your current one etc.
-- special items available: BedBug, Dream Defender, Egg Bridge, TNT Jump and Straight Fireball.
-- quick buy feature is available and is synced between nodes as well in bungee mode.
+- `bedwars-plugin/src/main/java/com/andrei1058/bedwars/shop/editor/ShopEditor.java`
+- `bedwars-plugin/src/main/java/com/andrei1058/bedwars/shop/editor/ShopEditorListener.java`
+- `bedwars-plugin/src/main/java/com/andrei1058/bedwars/commands/bedwars/subcmds/sensitive/CmdShopEditor.java`
 
-###### Team Upgrades | Customization:
-- you may have different team upgrades per arena group.
-- you may either add and remove categories and contents.
-- you may make upgrade elements that: enchant items, give potion effects (to team-mates/ base/ enemies when they enter the island), you can edit generator settings and change the dragons amount for the Sudden Death phase.
-- you may add new traps that: disenchant-items (sword, armor, bow), give potion effects (team/ base/ enemies), remove potion effect when an enemy enters your island range and trigger commands.
+修改：
 
-###### Ways to join an arena:
+- `.../configuration/Permissions.java` — 新增 `PERMISSION_SHOP_EDITOR` 权限。
+- `.../commands/bedwars/MainCommand.java` — 注册 `shopeditor` 子命令。
+- `.../shop/ShopManager.java` — 注册编辑器监听器。
+- `.../shop/main/ShopCategory.java` — 增加 `category-content` 空值防护。
+- `bedwars-api/.../api/configuration/ConfigPath.java` — 新增 `SHOP_CATEGORY_ITEM_NBT` 等常量
+  （支持 base64 序列化的模组物品）。
 
-- arena selector, which can be configured. /bw gui will display all arena groups while /bw gui Solo will show games from Solo groups and /bw gui Solo+4v4 will show games from Solo and 4v4.
-- you can also join games via NPCs by installing Citizens.
-- join-signs are also available with status block.
-- commands can be used as well. /bw join random will bring you the most filled arena, while /bw join mapName will send you to the given arena and /bw join groupName+groupName2 will bring you on a map from the given groups.
+---
 
-###### Arena Settings | Customization:
-- you can set a custom display name used on signs, GUIs etc.
-- option to set the amount of min/ max players and team size.
-- toggle options for: allowing spectators, disabling generators for empty teams, disabling NPCs for empty teams, disabling internal drops management, bed holograms usage.
-- protection range for team-spawn and team NPCs.
-- island radius (for features like triggering traps and map) border radius.
-- instant kill on void based on Y coordinate.
-- you can create as many teams as you want.
-- you can allow map breaking like on a SkyWars game.
-- you can toggle generator split.
-- custom game rules per map.
-- unlimited iron/ gold / emerald (this one can pe activated from upgrades) generators per team.
+## 目录结构
 
-###### Vip Kick | Privilege:
-Players with bw.vip permission are able to join full arenas in starting phase. This will kick a player without bw.vip permission from that game.
+```
+改mod工程项目/
+├── BedWars1058-25.9/          # 插件源码（Maven 多模块工程）
+│   ├── bedwars-plugin/        # 主模块（含商店编辑器）
+│   ├── bedwars-api/           # API 模块
+│   ├── versionsupport_*/      # 各版本适配（1.8 ~ 1.20.4）
+│   └── resetadapter_*/        # 地图重置适配器
+├── server/                    # 运行中的服务器（Arclight 1.20.1）
+│   └── plugins/BedWars1058/   # 插件数据目录（shop.yml 等）
+├── bedwars-plugin-25.5-SNAPSHOT.jar          # 原始备份
+├── bedwars-plugin-25.5-modshop-patched.jar   # 补丁第 1 版
+├── bedwars-plugin-25.5-modshop-patched2.jar  # 补丁第 2 版
+└── bedwars-plugin-25.5-modshop-patched3.jar  # 补丁第 3 版（最新）
+```
 
-###### Player Statistics:
-- we do not provide top holograms but you can use ajLeaderboards for that or LeaderHeads using the placeholders we provide.
-- players can see their stats using the internal stats GUI, which can be customized and accessed by /bw stats.
+---
 
-###### Party System:
-- we provide a basic and functional internal party system to play with your friends on the same team or arena.
-- we also support Parties by AlessioDP and Party and Friends by Simonsator which could be a better solution if you are a large network.
+## 构建
 
-###### Anti AFK System:
-Inactive players for more than 45 seconds can't pick-up items from generators.
+在 `BedWars1058-25.9/` 目录下执行：
 
-###### Custom Join Items:
-- you can add and remove items that you receive when you join the server (only on multi-arena) and the items you receive when you join a game in starting/ waiting phase or when you join as a spectator.
-- join items can execute commands.
+```bash
+mvn clean package -pl bedwars-plugin -am
+```
 
-###### Map Restore System:
-- the default restore adapter from BedWars1058 is based on un-loading the map, un-zipping a backup and loading it again. This may be heavy for servers with cheap hardware. We recommend using gaming processors and a SSD.
-- to improve performance we added support for SlimeWorldManager, which loads maps way faster with less performance impact thanks to its slime format. We really encourage you installing this plugin. No manual conversion is required. BedWars1058 will handle everything. Read how to install it here.
-- you can also implement your own map adapter trough the API.
-- it may seem heavy than other plugins because we don't simply keep track of modified blocks. We need to restore the entire map because server owners can allow players to destroy the maps like on a SkyWars game. Regions like generators, NPCs and team spawns will be protected.
+- `-pl bedwars-plugin`：只构建主模块。
+- `-am`：同时构建它依赖的模块（api、versionsupport 等）。
 
-###### Re-Join | Feature:
-If you get disconnected, or if you leave a game (configurable) you can re-join it via command or by joining the server again. This is also available in bungee scalable mode.
+产物位于 `bedwars-plugin/target/`，jar 名形如 `bedwars-plugin-<version>.jar`
+（源码基线版本为 25.2，若需与线上 25.5-SNAPSHOT 对齐，请先调整 `pom.xml` 版本号）。
 
-###### TNT Jump | Feature:
-- players are able to do tnt jump with configurable values.
-- players with tnt in their inventory have a red particle on their head (configurable).
+---
 
-###### Season events:
-- Halloween special. It is enabled automatically based on your machine timezone and will provide cool effects.
+## 补丁与部署
 
-# Contributing
-Any help is appreciated, just give a quick look at [CONTRIBUTING.md](https://github.com/andrei1058/BedWars1058/blob/master/CONTRIBUTING.md) first!
+线上运行的 `bedwars-plugin-25.5-SNAPSHOT.jar` 是 25.5-SNAPSHOT 版本，源码基线为 25.2。
+补丁流程为：把源码改动编译出的 class，替换进 25.5-SNAPSHOT 的 jar 内。
 
-If you are not a programmer you can help answering people in the [Issues](https://github.com/andrei1058/BedWars1058/issues) section or even [translate the plugin in your languae on Crowdin](https://crowdin.com/project/bedwars1058).
+当前最新补丁为 `bedwars-plugin-25.5-modshop-patched3.jar`，部署方式：
 
-### Translation progress
-[Translation Chart](https://badges.awesome-crowdin.com/translation-12780139-594479.png)
+```bash
+# 备份线上 jar
+copy server\plugins\bedwars-plugin-25.5-SNAPSHOT.jar server\plugins\bedwars-plugin-25.5-SNAPSHOT.jar.bak
 
-# 3rd party libraries
-- [bStats](https://bstats.org/getting-started/include-metrics)
-- [SidebarLib](https://github.com/andrei1058/SiderbarLib)
-- [Commons IO](https://mvnrepository.com/artifact/commons-io/commons-io)
-- [HikariCP](https://mvnrepository.com/artifact/com.zaxxer/HikariCP)
-- [SLF4J](http://www.slf4j.org/)
+# 用最新补丁覆盖
+copy bedwars-plugin-25.5-modshop-patched3.jar server\plugins\bedwars-plugin-25.5-SNAPSHOT.jar
+```
 
-# Contact
-[![Discord Server](https://discordapp.com/api/guilds/201345265821679617/widget.png?style=banner3)](https://discord.gg/XdJfN2X)
+部署后**重启服务器**，确认控制台无 `Error occurred while enabling BedWars1058` 报错。
 
-# Special Thanks To
-[<img src="https://user-images.githubusercontent.com/21148213/121807008-8ffc6700-cc52-11eb-96a7-2f6f260f8fda.png" alt="" width="150">](https://www.jetbrains.com)
+---
 
-Jetbrains supports BedWars1058 with their [Open Source Licenses](https://www.jetbrains.com/opensource/).
+## 使用说明
+
+1. 拥有 `bw.shopeditor` 权限的玩家执行 `/bw shopeditor`。
+2. 在 GUI 中：
+   - 新增 / 编辑 / 删除**分类**；
+   - 在分类下新增 / 编辑 / 删除**商品**与 **tier**；
+   - 点击图标槽后，把背包里的物品（含模组物品）放上去即可替换为商品。
+3. 改动后点击「保存」，配置写入 `server/plugins/BedWars1058/shop.yml`。
+
+> 分类名请使用英文、数字、下划线或连字符；纯符号 / 中文名会被拦截。
+
+---
+
+## 许可证
+
+本项目基于 [BedWars1058](https://github.com/andrei1058/BedWars1058)（Andrei Dascălu），
+遵循 GNU GPL v3.0 协议。详情见 `BedWars1058-25.9/LICENSE`。
